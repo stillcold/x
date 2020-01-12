@@ -1,0 +1,20 @@
+I put this spec here so I can write as it tells, this is the basic rule this
+repo must follow.
+
+### code style
+- Folder name shold be written in lower-case letters instead of capitals.
+- File name also in lower-case.
+- Class, method, and field names donnot use camel casing.
+- Sample:
+
+```
+sample.lua:
+
+function sample:do_fun()
+end
+```
+
+### debug and log
+- use core.debug as more as possible.
+- set debug level to a value when init the process with code.debuglevel(level, [ignore the output without level,set -1 will ignore]).
+- debug level 0 is used by engine.
