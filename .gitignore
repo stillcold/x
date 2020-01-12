@@ -1,16 +1,16 @@
-# Prerequisites
-*.d
-
 # Object files
 *.o
+*.d
+.depend
+tags
+gate
+server
+client
+/deps/lua/lua
+luac
 *.ko
 *.obj
 *.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
 
 # Precompiled Headers
 *.gch
@@ -35,18 +35,24 @@
 *.i*86
 *.x86_64
 *.hex
-
+/x
 # Debug files
 *.dSYM/
-*.su
-*.idb
-*.pdb
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+#Pribate files
+/one/KeywordTbl.lua
+/process/one/keywords/*.lua
+process/one/Index.lua
+process/one/HtmlTags.lua
+
+# Deploy
+/deploy/BigFileEncoder.lua
+/deploy/SheeryEncoder.lua
+/deploy/encoded-codemgr-src/*.php
+/deploy/encoded-codemgr-src/x_code_deploy_dir
+
+#lualib
+/lualib/libChao_Lua
+
+#log
+/log
