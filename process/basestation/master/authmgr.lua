@@ -1,8 +1,7 @@
-local crypt 		= require "sys.crypt"
+MODULE("authmgr")
 
-local authmgr = {
-	authed_client 	= {},
-}
+authmgr.authed_client 	= {}
+
 
 function authmgr:is_auth_client(clientid)
 	local expire = self.authed_client[clientid]
@@ -29,4 +28,3 @@ function slave2master:auth(fd, cryptstr, authcode)
 	end
 end
 
-return authmgr

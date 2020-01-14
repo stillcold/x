@@ -25,5 +25,6 @@ core.start(function()
 	local authcode	= core.envget("auth_code")
 	local cryptstr 	= crypt.aesencode(authsalt, authcode)
 	slave2master:auth(getmasterfd(), cryptstr, authcode)
+	slave2master:querysearchrepo_overview(getmasterfd())
 end)
 

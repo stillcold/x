@@ -1,11 +1,6 @@
-require "utils.tableutils"
-require "sys.tick"
-core				= require "sys.core"
+require "globalrequire"
 
 local console 		= require "sys.console"
-
-g_slaveconn 		= require "slaveconn"
-g_authmgr			= require "authmgr"
 
 console {
 	addr =  ":"..core.envget("admin_port")

@@ -1,8 +1,6 @@
-local core			= require "sys.core"
 local server		= require "saux.server"
 local rpchandledef	= require "slave2master"
 local rpcsenderdef	= require "master2slave"
-					  require "dispatch"
 
 local ip = core.envget "master_listen_ip"
 local port = core.envget "master_listen_port"
