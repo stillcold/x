@@ -1,15 +1,16 @@
 require "sys.tick"
 require "utils.tableutils"
 core 				= require "sys.core"
-local crypt			= require "sys.crypt"
-local masterconn 	= require "masterconn"
+crypt				= require "sys.crypt"
 
+require "sys.module"
+local masterconn 	= require "masterconn"
 require "reciever"
+require "filesync/filesyncmgr"
 
 function getmasterfd()
 	return masterconn:getserverfd()
 end
-
 
 core.start(function()
 	local loglevel 	= tonumber(core.envget("log_level"))

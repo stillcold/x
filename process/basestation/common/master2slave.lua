@@ -1,8 +1,11 @@
-Master2Slave = {}
+master2slave = {}
 
 return {
-	Master2Slave, 
+	master2slave, 
 	{
 		{"Test", "T"},
+		{"syncsearchrepo_overview", "T"},
+		{"syncfilecontent", "SS"},
+
 	}
 }

@@ -5,6 +5,8 @@ return {
 	{
 		{"querysearchrepo_overview", ""},
 		{"auth", "SS"},
+		{"requestdownloadfile", "S"},
+		{"requestuploadfile", "SS"},
 
 	}
 }
