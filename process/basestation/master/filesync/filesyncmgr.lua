@@ -61,7 +61,7 @@ function filesyncmgr:get_searchrepo_overview()
 	return tosyncdata
 end
 
-function filesyncmgr:writedownfilecontent(filename, filecontent)
+function filesyncmgr:writedownfilecontent(fd, filename, filecontent)
 	
 	local repodir 		= core.envget("search_repo_dir")
 	local fullpath		= repodir.."/"..filename

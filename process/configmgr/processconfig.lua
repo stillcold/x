@@ -99,7 +99,7 @@ return {
 				{"log_default", 		"BaseStationLogDefault", -1},
 				{"auth_salt", 			"BaseStationAuthSalt", "salt"},
 				{"auth_code", 			"BaseStationAuthCode", "code"},
-				{"search_repo_dir", 	"BaseStationSearchRepo", "/mnt/d/WWW/x_code_deploy_dir/"},
+				{"search_repo_dir", 	"BaseStationSearchRepo", "/mnt/d/WWW/x_code_deploy_dir_test/"},
 			},
 		},
 	},

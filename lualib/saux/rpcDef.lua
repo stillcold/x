@@ -47,6 +47,7 @@ function RpcDef:InitRpcHandle(rpcHandleDef, precheckfunc)
 			core.log("no handle found", rpcName)
 			return
 		end
+		core.debug(0, "rpc call rpcname is", rpcName)
 		if not self:CheckRpcArgs(args, definedTypeList) then
 			return
 		end
