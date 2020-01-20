@@ -1,5 +1,11 @@
 MODULE("filesyncmgr")
 
+function filesyncmgr:ismatchfilter(filename, filterpattern)
+	if string.find(filename, filterpattern) then
+		return true
+	end
+end
+
 function filesyncmgr:handlesearchrepo_overview(fd, overview)
 	-- PrintTable(overview)
 	local searchrepodir 	= core.envget("search_repo_dir")
@@ -33,6 +39,63 @@ function filesyncmgr:handlesearchrepo_overview(fd, overview)
 			if attr.modification == modification then
 				core.debug(1, "modification time is the same with "..filename)
 			end
+		end
+	end
+
+	local localfiles = {}
+	
+	local repodir 		= core.envget("search_repo_dir")
+	local filterpattern	= core.envget("search_file_filter") or "%.lua"
+	
+	local function querydir (relativepath)
+		local toquerydir = repodir
+
+		if relativepath then
+			toquerydir = repodir.."/"..relativepath
+		end
+
+		for entry in lfs.dir(toquerydir) do
+		
+			local fullpath = toquerydir.."/"..entry
+			local attr = lfs.attributes(fullpath)
+
+			if (type(attr) == "table") then
+				if(attr.mode == "directory") then
+					core.debug(1, fullpath .." is a dir")
+					if entry ~= "." and entry ~= ".." then
+						if relativepath then
+							querydir(relativepath.."/"..entry)
+						else
+							querydir(entry)
+						end
+					end
+				elseif attr.mode=="file" then
+					local toreportfilename = entry
+					if relativepath then
+						toreportfilename = relativepath.."/"..entry
+					end
+
+					if self:ismatchfilter(toreportfilename, filterpattern) then
+						local modification = attr.modification
+						core.debug(1, fullpath.." is a match file, modification time is ", modification)
+						localfiles[toreportfilename] = modification
+					else
+						core.debug(1, fullpath.." is a mismatch file")
+					end
+				end
+			else
+				core.debug(2, "query "..fullpath.." failed")
+			end
+		end
+
+	end
+
+	core.debug(1, "ls dir:")
+	querydir()
+
+	for filename, modification in pairs(localfiles or {}) do
+		if not overview[filename] then
+			slave2master:requestuploadfile(fd, filename)
 		end
 	end
 end
