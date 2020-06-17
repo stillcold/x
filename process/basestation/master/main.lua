@@ -10,6 +10,7 @@ core.start(function()
 	local logdefault= tonumber(core.envget("log_default"))
 	core.debug(1, "set debug level to ".. loglevel ..", log default flag:"..logdefault)
 	core.debuglevel(loglevel, logdefault)
+	core.debug("test default")
 	g_slaveconn:listen()
 
 end)
