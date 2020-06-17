@@ -11,3 +11,7 @@ end
 function master2slave:syncfilecontent(fd, filename, filecontent)
 	g_filesyncmgr:writedownfilecontent(filename, filecontent)
 end
+
+function master2slave:syncauthresult(fd, result)
+	core.debug(1, "auth result", result)
+end

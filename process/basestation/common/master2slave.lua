@@ -6,6 +6,7 @@ return {
 		{"Test", "T"},
 		{"syncsearchrepo_overview", "T"},
 		{"syncfilecontent", "SS"},
+		{"syncauthresult", "I"},
 
 	}
 }
