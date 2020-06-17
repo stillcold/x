@@ -25,6 +25,8 @@ function slave2master:auth(fd, cryptstr, authcode)
 		end
 		local expire = os.time() + 10
 		g_authmgr:record_auth_client(clientid, expire)
+		master2slave:syncauthresult(fd, 1)
+		core.debug(2, "auth done")
 	else
 		core.debug(2, "auth failed")
 
