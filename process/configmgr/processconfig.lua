@@ -93,7 +93,7 @@ return {
 				{"bootstrap", 			nil, "process/basestation/slave/main.lua"},
 				{"lualib_path", 		nil, "test/?.lua;lualib/?.lua;process/basestation/slave/?.lua;process/basestation/common/?.lua;"},
 				{"lualib_cpath", 		nil, "luaclib/?.so"},
-				{"master_host", 		"PublicIp", "127.0.0.1"},
+				{"master_host", 		"BaseStationMasterListenIp", "127.0.0.1"},
 				{"master_listen_port", 	"BaseStaionMasterListenPort", 10001},
 				{"log_level", 			"BaseStaionLogLevel", 2},
 				{"log_default", 		"BaseStationLogDefault", -1},

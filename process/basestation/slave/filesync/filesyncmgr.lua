@@ -7,7 +7,7 @@ function filesyncmgr:ismatchfilter(filename, filterpattern)
 end
 
 function filesyncmgr:handlesearchrepo_overview(fd, overview)
-	-- PrintTable(overview)
+	PrintTable(overview)
 	local searchrepodir 	= core.envget("search_repo_dir")
 	for filename, modification in pairs(overview) do
 		core.debug(1, "handling "..filename)
@@ -61,7 +61,7 @@ function filesyncmgr:handlesearchrepo_overview(fd, overview)
 
 			if (type(attr) == "table") then
 				if(attr.mode == "directory") then
-					core.debug(1, fullpath .." is a dir")
+					-- core.debug(1, fullpath .." is a dir")
 					if entry ~= "." and entry ~= ".." then
 						if relativepath then
 							querydir(relativepath.."/"..entry)
@@ -77,25 +77,35 @@ function filesyncmgr:handlesearchrepo_overview(fd, overview)
 
 					if self:ismatchfilter(toreportfilename, filterpattern) then
 						local modification = attr.modification
-						core.debug(1, fullpath.." is a match file, modification time is ", modification)
+						-- core.debug(1, fullpath.." is a match file, modification time is ", modification)
 						localfiles[toreportfilename] = modification
 					else
-						core.debug(1, fullpath.." is a mismatch file")
+						-- core.debug(1, fullpath.." is a mismatch file")
 					end
 				end
 			else
-				core.debug(2, "query "..fullpath.." failed")
+				-- core.debug(2, "query "..fullpath.." failed")
 			end
 		end
-
 	end
 
-	core.debug(1, "ls dir:")
+	core.debug(1, "check local files to upload, ls dir:")
 	querydir()
 
 	for filename, modification in pairs(localfiles or {}) do
 		if not overview[filename] then
-			slave2master:requestuploadfile(fd, filename)
+			local fullpath 		= repodir.."/"..filename
+			local file			= io.open(fullpath, "rb")
+			if file then
+				local filecontent = file:read("*a")
+				file:close()
+				core.debug(1, "try to upload "..fullpath)
+				slave2master:requestuploadfile(fd, filename, filecontent)
+			else
+				core.debug(1, "open file failed "..fullpath)
+			end
+		else
+			core.debug(1, "file already found in master "..fullpath)
 		end
 	end
 end
