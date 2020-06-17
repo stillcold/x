@@ -113,6 +113,7 @@ useMap=#mp></P>
 <A href="search?sign=antihack&Hello=all">全&nbsp;服</A>　<B>今&nbsp;日</B>　
 <A href="search?sign=antihack&Hello=week">最&nbsp;近</A>　
 <A href="search?sign=antihack&Hello=month">本&nbsp;月</A>　
+<A href="search?sign=antihack&Hello=pin">常&nbsp;驻</A>　
 
 <P id=lm></P>
 
@@ -263,8 +264,8 @@ overflow: hidden;
 <A href="search?sign=antihack&Hello=week">最&nbsp;近</A>　
 <A href="search?sign=antihack&Hello=month">本&nbsp;月</A>　
 
-<A href="search?sign=antihack&Hello=weeklyReport">周&nbsp;报</A>
-
+<A href="search?sign=antihack&Hello=pin">常&nbsp;驻</A>　
+<A href="search?sign=antihack&Hello=weeklyReport">周&nbsp;报</A>　
 <P id=lm></P>
 
 </DIV>

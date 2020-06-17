@@ -112,6 +112,14 @@ end
 	return birthdayTxt or ""
 end
 
+local function getDateDescByTime(timestamp)
+	local lineDateBeginTag = "<i>"
+	local lineDateEndTag = "</i>"
+	local lineBeginDate = os.date("*t", timestamp)
+	local timeTitle = lineDateBeginTag..lineBeginDate.month.."月"..lineBeginDate.day.."日"..lineDateEndTag
+	return timeTitle
+end
+
 dispatch["/"] = function(fd, request, body)
 
 	
@@ -146,9 +154,11 @@ dispatch["/search"] = function(fd, request, body)
 	end
 	
 	-- local body = httpIndex.SearchResultHead..searchMgr:GetAnswer(content)..httpIndex.SearchResultTail
-	local HighTime = os.time() + 24 * 3600
-	local LowTime = os.time() - 2 * 24 * 3600
-	local dayRange = 1
+	local HighTime 		= os.time() + 24 * 3600
+	local LowTime 		= os.time() - 2 * 24 * 3600
+	local dayRange 		= 1
+	local saveDel 		= 1
+	local onlyShowPin 	= 0
 	if content == "today" or content == "today todo" or content == "今日任务" then
 		HighTime = os.time() + 24 * 3600
 		dayRange = 2
@@ -170,8 +180,21 @@ dispatch["/search"] = function(fd, request, body)
 		LowTime = 0
 		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
 		dayRange = -1
+		saveDel = 0
+	end
+
+	if content == "pin" then
+		LowTime = 0
+		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
+		dayRange = -1
+		onlyShowPin = 1
 	end
 	
+	local delbuttonText = "done"
+	if saveDel == 0 then
+		delbuttonText = "delete"
+	end
+
 	local queryResult = db:GetRecordByRemindTimeRange(LowTime, HighTime)
 	local showTbl = {}
 	local result = ""
@@ -189,45 +212,56 @@ dispatch["/search"] = function(fd, request, body)
 	for k,v in pairs (queryResult or {}) do
 		print(k,v.AllProps)
 		print(v.Id)
-		showTbl[v.Id] = v.AllProps
-		local jsonStr = v.AllProps
-		local jsonTbl = json.decode(jsonStr)
-		local text = jsonTbl.content
-		local nowTime = os.time()
-		local nowDateW = tonumber(os.date("%W", nowTime))
+		showTbl[v.Id] 	= v.AllProps
+		local jsonStr 	= v.AllProps
+		local jsonTbl 	= json.decode(jsonStr)
+		local text 		= jsonTbl.content
+		local pin 		= jsonTbl.pin
+
+		-- 只显示常驻的
+		if onlyShowPin == 0 or (pin == 1)then
 		
-		if content == "week" or content == "week todo" or content == "本周任务" then
+			local nowTime 	= os.time()
+			local nowDateW 	= tonumber(os.date("%W", nowTime))
+			local lineBeginDate = os.date("*t", v.RemindTime)
+			local textWithDate = lineDateBeginTag..lineBeginDate.month.."月"..lineBeginDate.day.."日"..lineDateEndTag.."&nbsp&nbsp"..text
+			local timeTitle = "&nbsp&nbsp"..getDateDescByTime(v.RemindTime)-- lineDateBeginTag..lineBeginDate.month.."月"..lineBeginDate.day.."日"..lineDateEndTag
+			local textOfContent = lineDateBeginTag..lineBeginDate.month.."月"..lineBeginDate.day.."日"..lineDateEndTag.."&nbsp&nbsp"..text
+
+			if content == "week" or content == "week todo" or content == "本周任务" then
 		
-			local dateT = os.date("*t", v.RemindTime)
-			local dateR = tonumber(os.date("%W", v.RemindTime))
-			local dateY = tonumber(os.date("%j", v.RemindTime))
-			local weekDayBeginTag = "<em>"
-			local weekDayEndTag = "</em>"
+				local dateT = os.date("*t", v.RemindTime)
+				local dateR = tonumber(os.date("%W", v.RemindTime))
+				local dateY = tonumber(os.date("%j", v.RemindTime))
+				local weekDayBeginTag = "<em>"
+				local weekDayEndTag = "</em>"
 			
-			local wday = dateT.wday
-			wday = wday - 1
-			if wday == 0 then
-				wday = "日"
-			end
-		
-			if not dayOfYearCache[dateY] then
-				dayOfYearCache[dateY] = 1
-				if dateR == nowDateW - 1 then
-					result = result..weekDayBeginTag.."上周"..wday..weekDayEndTag.."<br>"
-				elseif dateR == nowDateW then
-					result = result..weekDayBeginTag.."本周"..wday..weekDayEndTag.."<br>"
-				elseif dateR == nowDateW + 1 then
-					result = result..weekDayBeginTag.."下周"..wday..weekDayEndTag.."<br>"
-				else
-					result = result..weekDayBeginTag.."较远"..weekDayEndTag.."<br>"
+				local wday = dateT.wday
+				wday = wday - 1
+				if wday == 0 then
+					wday = "日"
 				end
+		
+				if not dayOfYearCache[dateY] then
+					dayOfYearCache[dateY] = 1
+					if dateR == nowDateW - 1 then
+						result = result..weekDayBeginTag.."上周"..wday..weekDayEndTag..timeTitle.."<br>"
+					elseif dateR == nowDateW then
+						result = result..weekDayBeginTag.."本周"..wday..weekDayEndTag..timeTitle.."<br>"
+					elseif dateR == nowDateW + 1 then
+						result = result..weekDayBeginTag.."下周"..wday..weekDayEndTag..timeTitle.."<br>"
+					else
+						result = result..weekDayBeginTag.."较远"..weekDayEndTag..timeTitle.."<br>"
+					end
+				end
+				textOfContent = text
 			end
+
+			result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
+			result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
+			result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&saveDel=]]..saveDel..[[&text=]]..text..[[">]]..delbuttonText..[[</a>&nbsp;&nbsp;]]..textOfContent..[[<br>]]
+
 		end
-		local lineBeginDate = os.date("*t", v.RemindTime)
-		local textWithDate = lineDateBeginTag..lineBeginDate.month.."月"..lineBeginDate.day.."日"..lineDateEndTag.."&nbsp&nbsp"..text
-		result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
-		result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
-		result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">done</a>&nbsp;&nbsp;]]..textWithDate..[[<br>]]
 	end
 	
 	result = result.."<br>"
@@ -271,17 +305,27 @@ dispatch["/delete"] = function(fd, request, body)
 	
 	print("try delete")
 	-- write(fd, 200, {"Content-Type: text/plain"}, content)
-	local content, editTarget, text
+	local content, editTarget, text, saveDel
 	if request.form then
 		content 	= request.form.todoType
 		editTarget 	= request.form.id
 		text  		= request.form.text
+		saveDel		= request.form.saveDel
+	else
+		saveDel		= 1
 	end
+
+	saveDel = tonumber(saveDel)
+
+	print("saveDel", saveDel)
+	local onlyShowPin = 0
 
 	db:DeleteRecordById(editTarget)
 	local diarySaveInfoTbl = {keyworld = text, action = "add", tag = "text_from_todo"}
 	
-	httpClient.POST("http://127.0.0.1:8086/diary/writedown.php", {"Content-Type: text/plain"}, json.encode(diarySaveInfoTbl))
+	if saveDel ~= 0 then
+		httpClient.POST("http://127.0.0.1:8086/diary/writedown.php", {"Content-Type: text/plain"}, json.encode(diarySaveInfoTbl))
+	end
 	
 	-- local body = httpIndex.SearchResultHead..searchMgr:GetAnswer(content)..httpIndex.SearchResultTail
 	local HighTime = os.time() + 24 * 3600
@@ -307,10 +351,21 @@ dispatch["/delete"] = function(fd, request, body)
 		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
 		dayRange = -1
 	end
+
+	if content == "pin" then
+		onlyShowPin = 1
+		LowTime = 0
+		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
+		dayRange = -1
+	end
 	
 	local queryResult = db:GetRecordByRemindTimeRange(LowTime, HighTime)
 	local showTbl = {}
 	local result = ""
+	local delbuttonText = "done"
+	if saveDel == 0 then
+		delbuttonText = "delete"
+	end
 	
 	local todayTimeStrForShow = getTodayDataStr()
 	result = result.."<br>"..todayTimeStrForShow
@@ -326,43 +381,49 @@ dispatch["/delete"] = function(fd, request, body)
 	for k,v in pairs (queryResult or {}) do
 		print(k,v.AllProps)
 		print(v.Id)
-		showTbl[v.Id] = v.AllProps
-		local jsonStr = v.AllProps
-		local jsonTbl = json.decode(jsonStr)
-		local text = jsonTbl.content
+		showTbl[v.Id] 	= v.AllProps
+		local jsonStr 	= v.AllProps
+		local jsonTbl 	= json.decode(jsonStr)
+		local text 		= jsonTbl.content
+		local pin 		= jsonTbl.pin
 		
-		local nowTime = os.time()
-		local nowDateW = tonumber(os.date("%W", nowTime))
+		if onlyShowPin == 0 or pin == 1 then
+
+			local nowTime = os.time()
+			local nowDateW = tonumber(os.date("%W", nowTime))
 		
-		if content == "week" or content == "week todo" or content == "本周任务" then
+			if content == "week" or content == "week todo" or content == "本周任务" then
 		
-			local dateT = os.date("*t", v.RemindTime)
-			local dateR = tonumber(os.date("%W", v.RemindTime))
-			local dateY = tonumber(os.date("%j", v.RemindTime))
+				local dateT = os.date("*t", v.RemindTime)
+				local dateR = tonumber(os.date("%W", v.RemindTime))
+				local dateY = tonumber(os.date("%j", v.RemindTime))
 			
-			local wday = dateT.wday
-			wday = wday - 1
-			if wday == 0 then
-				wday = "日"
-			end
-			if not dayOfYearCache[dateY] then
-				dayOfYearCache[dateY] = 1
-				if dateR == nowDateW - 1 then
-					result = result..weekDayBeginTag.."上周"..wday..weekDayEndTag.."<br>"
-				elseif dateR == nowDateW then
-					result = result..weekDayBeginTag.."本周"..wday..weekDayEndTag.."<br>"
-				elseif dateR == nowDateW + 1 then
-					result = result..weekDayBeginTag.."下周"..wday..weekDayEndTag.."<br>"
-				else
-					result = result..weekDayBeginTag.."较远"..weekDayEndTag.."<br>"
+				local wday = dateT.wday
+				wday = wday - 1
+				if wday == 0 then
+					wday = "日"
 				end
+				if not dayOfYearCache[dateY] then
+					dayOfYearCache[dateY] = 1
+					if dateR == nowDateW - 1 then
+						result = result..weekDayBeginTag.."上周"..wday..weekDayEndTag.."<br>"
+					elseif dateR == nowDateW then
+						result = result..weekDayBeginTag.."本周"..wday..weekDayEndTag.."<br>"
+					elseif dateR == nowDateW + 1 then
+						result = result..weekDayBeginTag.."下周"..wday..weekDayEndTag.."<br>"
+					else
+						result = result..weekDayBeginTag.."较远"..weekDayEndTag.."<br>"
+					end
+				end
+			
 			end
 			
+			local textOfContent = getDateDescByTime(v.RemindTime).."&nbsp;&nbsp;"..text
+
+			result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
+			result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
+			result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&saveDel=]]..saveDel..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">]]..delbuttonText..[[</a>&nbsp;&nbsp;]]..textOfContent..[[<br>]]
 		end
-		
-		result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
-		result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
-		result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">done</a>&nbsp;&nbsp;]]..text..[[<br>]]
 	end
 	
 	result = result.."<br>"
@@ -399,6 +460,8 @@ dispatch["/postpone"] = function(fd, request, body)
 		remindTime  = request.form.remindTime
 	end
 
+	local onlyShowPin = 0
+
 	db:PostponeRecordById(editTarget, tonumber(remindTime))
 	
 	-- local diarySaveInfoTbl = {keyworld = text, action = "add", tag = "text_from_todo"}
@@ -428,6 +491,14 @@ dispatch["/postpone"] = function(fd, request, body)
 		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
 		dayRange = -1
 	end
+
+	if content == "pin" then
+		onlyShowPin = 1
+		
+		LowTime = 0
+		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
+		dayRange = -1
+	end
 	
 	local queryResult = db:GetRecordByRemindTimeRange(LowTime, HighTime)
 	local showTbl = {}
@@ -447,43 +518,48 @@ dispatch["/postpone"] = function(fd, request, body)
 	for k,v in pairs (queryResult or {}) do
 		print(k,v.AllProps)
 		print(v.Id)
-		showTbl[v.Id] = v.AllProps
-		local jsonStr = v.AllProps
-		local jsonTbl = json.decode(jsonStr)
-		local text = jsonTbl.content
+		showTbl[v.Id] 	= v.AllProps
+		local jsonStr 	= v.AllProps
+		local jsonTbl 	= json.decode(jsonStr)
+		local text 		= jsonTbl.content
+		local pin  		= jsonTbl.pin
 		
-		local nowTime = os.time()
-		local nowDateW = tonumber(os.date("%W", nowTime))
+		if pin == 1 or onlyShowPin == 0 then
+
+			local nowTime = os.time()
+			local nowDateW = tonumber(os.date("%W", nowTime))
 		
-		if content == "week" or content == "week todo" or content == "本周任务" then
+			if content == "week" or content == "week todo" or content == "本周任务" then
 		
-			local dateT = os.date("*t", v.RemindTime)
-			local dateR = tonumber(os.date("%W", v.RemindTime))
-			local dateY = tonumber(os.date("%j", v.RemindTime))
+				local dateT = os.date("*t", v.RemindTime)
+				local dateR = tonumber(os.date("%W", v.RemindTime))
+				local dateY = tonumber(os.date("%j", v.RemindTime))
 			
-			local wday = dateT.wday
-			wday = wday - 1
-			if wday == 0 then
-				wday = "日"
-			end
-			if not dayOfYearCache[dateY] then
-				dayOfYearCache[dateY] = 1
-				if dateR == nowDateW - 1 then
-					result = result..weekDayBeginTag.."上周"..wday..weekDayEndTag.."<br>"
-				elseif dateR == nowDateW then
-					result = result..weekDayBeginTag.."本周"..wday..weekDayEndTag.."<br>"
-				elseif dateR == nowDateW + 1 then
-					result = result..weekDayBeginTag.."下周"..wday..weekDayEndTag.."<br>"
-				else
-					result = result..weekDayBeginTag.."较远"..weekDayEndTag.."<br>"
+				local wday = dateT.wday
+				wday = wday - 1
+				if wday == 0 then
+					wday = "日"
 				end
-			end
+				if not dayOfYearCache[dateY] then
+					dayOfYearCache[dateY] = 1
+					if dateR == nowDateW - 1 then
+						result = result..weekDayBeginTag.."上周"..wday..weekDayEndTag.."<br>"
+					elseif dateR == nowDateW then
+						result = result..weekDayBeginTag.."本周"..wday..weekDayEndTag.."<br>"
+					elseif dateR == nowDateW + 1 then
+						result = result..weekDayBeginTag.."下周"..wday..weekDayEndTag.."<br>"
+					else
+						result = result..weekDayBeginTag.."较远"..weekDayEndTag.."<br>"
+					end
+				end
 			
-		end
+			end
 		
-		result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
-		result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
-		result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">done</a>&nbsp;&nbsp;]]..text..[[<br>]]
+			local textOfContent = getDateDescByTime(v.RemindTime).."&nbsp;&nbsp;"..text
+			result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
+			result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
+			result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">done</a>&nbsp;&nbsp;]]..textOfContent..[[<br>]]
+		end
 	end
 	
 	result = result.."<br>"
@@ -519,6 +595,8 @@ dispatch["/advance"] = function(fd, request, body)
 		remindTime  = request.form.remindTime
 	end
 
+	local onlyShowPin = 0
+
 	db:AdvanceRecordById(editTarget, tonumber(remindTime))
 	
 	-- local diarySaveInfoTbl = {keyworld = text, action = "add", tag = "text_from_todo"}
@@ -549,6 +627,13 @@ dispatch["/advance"] = function(fd, request, body)
 		dayRange = -1
 	end
 	
+	if content == "pin" then
+		onlyShowPin = 1
+		LowTime = 0
+		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
+		dayRange = -1
+	end
+	
 	local queryResult = db:GetRecordByRemindTimeRange(LowTime, HighTime)
 	local showTbl = {}
 	local result = ""
@@ -567,43 +652,48 @@ dispatch["/advance"] = function(fd, request, body)
 	for k,v in pairs (queryResult or {}) do
 		print(k,v.AllProps)
 		print(v.Id)
-		showTbl[v.Id] = v.AllProps
-		local jsonStr = v.AllProps
-		local jsonTbl = json.decode(jsonStr)
-		local text = jsonTbl.content
+		showTbl[v.Id] 	= v.AllProps
+		local jsonStr 	= v.AllProps
+		local jsonTbl 	= json.decode(jsonStr)
+		local text 		= jsonTbl.content
+		local pin		= jsonTbl.pin
 		
-		local nowTime = os.time()
-		local nowDateW = tonumber(os.date("%W", nowTime))
+		if onlyShowPin == 0 or pin == 1 then
+
+			local nowTime = os.time()
+			local nowDateW = tonumber(os.date("%W", nowTime))
 		
-		if content == "week" or content == "week todo" or content == "本周任务" then
+			if content == "week" or content == "week todo" or content == "本周任务" then
 		
-			local dateT = os.date("*t", v.RemindTime)
-			local dateR = tonumber(os.date("%W", v.RemindTime))
-			local dateY = tonumber(os.date("%j", v.RemindTime))
+				local dateT = os.date("*t", v.RemindTime)
+				local dateR = tonumber(os.date("%W", v.RemindTime))
+				local dateY = tonumber(os.date("%j", v.RemindTime))
 			
-			local wday = dateT.wday
-			wday = wday - 1
-			if wday == 0 then
-				wday = "日"
-			end
-			if not dayOfYearCache[dateY] then
-				dayOfYearCache[dateY] = 1
-				if dateR == nowDateW - 1 then
-					result = result..weekDayBeginTag.."上周"..wday..weekDayEndTag.."<br>"
-				elseif dateR == nowDateW then
-					result = result..weekDayBeginTag.."本周"..wday..weekDayEndTag.."<br>"
-				elseif dateR == nowDateW + 1 then
-					result = result..weekDayBeginTag.."下周"..wday..weekDayEndTag.."<br>"
-				else
-					result = result..weekDayBeginTag.."较远"..weekDayEndTag.."<br>"
+				local wday = dateT.wday
+				wday = wday - 1
+				if wday == 0 then
+					wday = "日"
 				end
-			end
+				if not dayOfYearCache[dateY] then
+					dayOfYearCache[dateY] = 1
+					if dateR == nowDateW - 1 then
+						result = result..weekDayBeginTag.."上周"..wday..weekDayEndTag.."<br>"
+					elseif dateR == nowDateW then
+						result = result..weekDayBeginTag.."本周"..wday..weekDayEndTag.."<br>"
+					elseif dateR == nowDateW + 1 then
+						result = result..weekDayBeginTag.."下周"..wday..weekDayEndTag.."<br>"
+					else
+						result = result..weekDayBeginTag.."较远"..weekDayEndTag.."<br>"
+					end
+				end
 			
-		end
+			end
 		
-		result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
-		result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
-		result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">done</a>&nbsp;&nbsp;]]..text..[[<br>]]
+			local textOfContent = getDateDescByTime(v.RemindTime).."&nbsp;&nbsp;"..text
+			result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
+			result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
+			result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">done</a>&nbsp;&nbsp;]]..textOfContent..[[<br>]]
+		end
 	end
 	
 	result = result.."<br>"
