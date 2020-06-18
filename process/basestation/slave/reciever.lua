@@ -15,3 +15,7 @@ end
 function master2slave:syncauthresult(fd, result)
 	core.debug(1, "auth result", result)
 end
+
+-- function master2slave:replyHttpResult(fd, headTbl, content)
+	
+-- end

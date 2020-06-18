@@ -13,3 +13,11 @@ end
 function slave2master:requestuploadfile(fd, filename, filecontent)
 	g_filesyncmgr:writedownfilecontent(fd, filename, filecontent)
 end
+
+function slave2master:redirectHttpRequest(fd, httpFd, requestUri, extra)
+	-- todo
+	local head = {"Content-Type: text/plain"}
+	local content = "ok"
+	master2slave:replyHttpResult(fd, httpFd, head, content)
+end
+

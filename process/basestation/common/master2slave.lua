@@ -7,6 +7,6 @@ return {
 		{"syncsearchrepo_overview", "T"},
 		{"syncfilecontent", "SS"},
 		{"syncauthresult", "I"},
-
+		{"replyHttpResult", "ITS"},
 	}
 }

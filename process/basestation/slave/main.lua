@@ -7,6 +7,29 @@ require "sys.module"
 local masterconn 	= require "masterconn"
 require "reciever"
 require "filesync/filesyncmgr"
+local server = require "http.server"
+local write = server.write
+
+local httpDispatch = {}
+httpDispatch["/"] = function(fd, request, body)
+	slave2master:redirectHttpRequest(getmasterfd(), fd, request.uri, "")
+	-- print("request is", request)
+	-- PrintTable(request)
+	-- write(fd, 200, {"Content-Type: text/plain"}, "ok")
+	-- print(fd, type(fd))
+end
+
+-- Entry!
+server.listen(":10002", function(fd, request, body)
+     local c = httpDispatch[request.uri]
+     if c then
+         c(fd, request, body)
+	 else
+         print("Unsupport uri", request.uri)
+         write(fd, 404, {"Content-Type: text/plain"}, "404 Page Not Found")
+     end
+end)
+
 
 function getmasterfd()
 	return masterconn:getserverfd()
@@ -29,3 +52,6 @@ core.start(function()
 	-- slave2master:querysearchrepo_overview(getmasterfd())
 end)
 
+function master2slave:replyHttpResult(fd, httpFd, headTbl, content)
+	write(httpFd, 200, headTbl, content)
+end

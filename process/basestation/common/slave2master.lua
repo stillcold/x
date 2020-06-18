@@ -7,6 +7,7 @@ return {
 		{"auth", "SS"},
 		{"requestdownloadfile", "S"},
 		{"requestuploadfile", "SS"},
+		{"redirectHttpRequest", "ISS"},
 
 	}
 }
