@@ -16,8 +16,14 @@ end
 
 function slave2master:redirectHttpRequest(fd, httpFd, requestUri, extra)
 	-- todo
-	local head = {"Content-Type: text/plain"}
+	print("slave to master done")
+	local head = {"Content-Type: text/html"}
 	local content = "ok"
-	master2slave:replyHttpResult(fd, httpFd, head, content)
+
+	local t = io.popen('curl www.baidu.com')
+	local a = t:read("*all")
+
+
+	master2slave:replyHttpResult(fd, httpFd, head, a)
 end
 
