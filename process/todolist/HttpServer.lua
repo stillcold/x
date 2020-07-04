@@ -46,7 +46,11 @@ local function getTodayDataStr()
 	return todayTimeStrForShow
 end
 
-local function getBirthdayInfo(dayRange, LowTime, HighTime)
+local function getBirthdayInfo(dayRange, LowTime, HighTime, queryTag)
+
+	if queryTag then
+		return ""
+	end
 	
 	-- 检查生日部分
 	local nowTime = os.time()
@@ -182,6 +186,20 @@ dispatch["/search"] = function(fd, request, body)
 		dayRange = -1
 		saveDel = 0
 	end
+	
+	-- 是否直接用tab作为tag来过滤
+	local useTagFilter = false
+	local queryTag = nil
+	if content == "topic" then
+		useTagFilter = true
+		queryTag = content
+	end
+	
+	if useTagFilter then
+		LowTime = 0
+		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
+		dayRange = -1
+	end
 
 	if content == "pin" then
 		LowTime = 0
@@ -217,9 +235,10 @@ dispatch["/search"] = function(fd, request, body)
 		local jsonTbl 	= json.decode(jsonStr)
 		local text 		= jsonTbl.content
 		local pin 		= jsonTbl.pin
+		local tagFromDb = jsonTbl.tag
 
 		-- 只显示常驻的
-		if onlyShowPin == 0 or (pin == 1)then
+		if (not useTagFilter and (onlyShowPin == 0 or (pin == 1)))  or (useTagFilter and tagFromDb == queryTag )  then
 		
 			local nowTime 	= os.time()
 			local nowDateW 	= tonumber(os.date("%W", nowTime))
@@ -267,7 +286,7 @@ dispatch["/search"] = function(fd, request, body)
 	result = result.."<br>"
 	
 	-- result = result.. cachedBirthday[dayRange]
-	result = result..getBirthdayInfo(dayRange, LowTime, HighTime)
+	result = result..getBirthdayInfo(dayRange, LowTime, HighTime, queryTag)
 	
 	if content == "weeklyReport" then
 		local diarySaveInfoTbl = {keyworld = text, action = "weekly", tag = "text_from_todo"}
@@ -359,6 +378,20 @@ dispatch["/delete"] = function(fd, request, body)
 		dayRange = -1
 	end
 	
+	-- 是否直接用tab作为tag来过滤
+	local useTagFilter = false
+	local queryTag = nil
+	if content == "topic" then
+		useTagFilter = true
+		queryTag = content
+	end
+	
+	if useTagFilter then
+		LowTime = 0
+		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
+		dayRange = -1
+	end
+	
 	local queryResult = db:GetRecordByRemindTimeRange(LowTime, HighTime)
 	local showTbl = {}
 	local result = ""
@@ -387,7 +420,7 @@ dispatch["/delete"] = function(fd, request, body)
 		local text 		= jsonTbl.content
 		local pin 		= jsonTbl.pin
 		
-		if onlyShowPin == 0 or pin == 1 then
+		if (not useTagFilter and (onlyShowPin == 0 or (pin == 1)))  or (useTagFilter and tagFromDb == queryTag )  then
 
 			local nowTime = os.time()
 			local nowDateW = tonumber(os.date("%W", nowTime))
@@ -427,7 +460,7 @@ dispatch["/delete"] = function(fd, request, body)
 	end
 	
 	result = result.."<br>"
-	result = result..getBirthdayInfo(dayRange, LowTime, HighTime)
+	result = result..getBirthdayInfo(dayRange, LowTime, HighTime, queryTag)
 	
 	-- local result = json.encode(showTbl)
 	local body = httpIndex.SearchResultHead..result..httpIndex.SearchResultTail
@@ -500,6 +533,20 @@ dispatch["/postpone"] = function(fd, request, body)
 		dayRange = -1
 	end
 	
+	-- 是否直接用tab作为tag来过滤
+	local useTagFilter = false
+	local queryTag = nil
+	if content == "topic" then
+		useTagFilter = true
+		queryTag = content
+	end
+	
+	if useTagFilter then
+		LowTime = 0
+		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
+		dayRange = -1
+	end
+	
 	local queryResult = db:GetRecordByRemindTimeRange(LowTime, HighTime)
 	local showTbl = {}
 	local result = ""
@@ -524,7 +571,7 @@ dispatch["/postpone"] = function(fd, request, body)
 		local text 		= jsonTbl.content
 		local pin  		= jsonTbl.pin
 		
-		if pin == 1 or onlyShowPin == 0 then
+		if (not useTagFilter and (onlyShowPin == 0 or (pin == 1)))  or (useTagFilter and tagFromDb == queryTag )  then
 
 			local nowTime = os.time()
 			local nowDateW = tonumber(os.date("%W", nowTime))
@@ -563,7 +610,7 @@ dispatch["/postpone"] = function(fd, request, body)
 	end
 	
 	result = result.."<br>"
-	result = result..getBirthdayInfo(dayRange, LowTime, HighTime)
+	result = result..getBirthdayInfo(dayRange, LowTime, HighTime, queryTag)
 	
 	-- local result = json.encode(showTbl)
 	local body = httpIndex.SearchResultHead..result..httpIndex.SearchResultTail
@@ -634,6 +681,20 @@ dispatch["/advance"] = function(fd, request, body)
 		dayRange = -1
 	end
 	
+	-- 是否直接用tab作为tag来过滤
+	local useTagFilter = false
+	local queryTag = nil
+	if content == "topic" then
+		useTagFilter = true
+		queryTag = content
+	end
+	
+	if useTagFilter then
+		LowTime = 0
+		HighTime = os.time() + 24 * 3600 * 366 * 10 -- 10年
+		dayRange = -1
+	end
+	
 	local queryResult = db:GetRecordByRemindTimeRange(LowTime, HighTime)
 	local showTbl = {}
 	local result = ""
@@ -658,7 +719,7 @@ dispatch["/advance"] = function(fd, request, body)
 		local text 		= jsonTbl.content
 		local pin		= jsonTbl.pin
 		
-		if onlyShowPin == 0 or pin == 1 then
+		if (not useTagFilter and (onlyShowPin == 0 or (pin == 1)))  or (useTagFilter and tagFromDb == queryTag )  then
 
 			local nowTime = os.time()
 			local nowDateW = tonumber(os.date("%W", nowTime))
@@ -697,7 +758,7 @@ dispatch["/advance"] = function(fd, request, body)
 	end
 	
 	result = result.."<br>"
-	result = result..getBirthdayInfo(dayRange, LowTime, HighTime)
+	result = result..getBirthdayInfo(dayRange, LowTime, HighTime, queryTag)
 	
 	-- local result = json.encode(showTbl)
 	local body = httpIndex.SearchResultHead..result..httpIndex.SearchResultTail

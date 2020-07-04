@@ -20,7 +20,14 @@ function slave2master:redirectHttpRequest(fd, httpFd, requestUri, extra)
 	local head = {"Content-Type: text/html"}
 	local content = "ok"
 
-	local t = io.popen('curl www.baidu.com')
+	if not string.find(requestUri, "http") then
+		requestUri = "https://"..requestUri
+	end
+
+	local cmd = "curl "..requestUri
+	print("cmd is ", cmd)
+
+	local t = io.popen(cmd)
 	local a = t:read("*all")
 
 
