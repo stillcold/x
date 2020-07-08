@@ -11,7 +11,7 @@ echo "search service pid is ${pid}"
 
 if [ "${pid}" = "" ]
 then
-	echo "no javasearch alive"
+	echo "no search service alive"
 else
 	kill -9 ${pid}
 fi
