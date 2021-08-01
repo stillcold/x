@@ -80,6 +80,7 @@ all: \
 	$(TARGET) \
 	$(LUACLIB_PATH)/sys.so \
 	$(LUACLIB_PATH)/zproto.so \
+	$(LUACLIB_PATH)/pb.so \
 	$(LUACLIB_PATH)/test.so \
 
 $(TARGET):$(OBJS) $(LUA_STATICLIB) $(MALLOC_STATICLIB)
@@ -91,6 +92,8 @@ $(LUACLIB_PATH):
 $(LUACLIB_PATH)/sys.so: $(addprefix $(LIB_PATH)/, $(LIB_SRC)) | $(LUACLIB_PATH)
 	$(CC) $(CCFLAG) $(INCLUDE) -o $@ $^ $(SHARED)
 $(LUACLIB_PATH)/zproto.so: lualib-src/zproto/lzproto.c lualib-src/zproto/zproto.c | $(LUACLIB_PATH)
+	$(CC) $(CCFLAG) $(INCLUDE) -o $@ $^ $(SHARED)
+$(LUACLIB_PATH)/pb.so: lualib-src/protobuffer/pb.c | $(LUACLIB_PATH)
 	$(CC) $(CCFLAG) $(INCLUDE) -o $@ $^ $(SHARED)
 $(LUACLIB_PATH)/test.so: $(LIB_PATH)/lualib-test.c | $(LUACLIB_PATH)
 	$(CC) $(CCFLAG) $(INCLUDE) -o $@ $^ $(SHARED)
