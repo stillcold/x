@@ -15,17 +15,22 @@ protoc:load ([==[
     }
 ]==])
 
-
+local fd2sessionId = {}
 local Gac2Gas = {}
 local Gas2Gac = {}
 local localId = 0
 
-local function SendRpc(fd, sessionId, cmd, context)
-	
+local function SendRpc(fd, cmd, context)
+
+	if not context then return end
+	if type(context) ~= "table" then
+		core.log("invalid context type")
+		return
+	end
+
 	sign = tostring(os.time())
 
 	local data = {
-		sessionId 	= sessionId,
 		cmd 		= cmd,
 		sign 		= sign,
 		context 	= json.encode(context),-- 这里只是为了快速开发直接用了json,其实可以考虑protobuffer.
@@ -35,9 +40,31 @@ local function SendRpc(fd, sessionId, cmd, context)
 	socket.write(fd, string.pack("<I4", #bytes)..bytes)
 end
 
-function Gac2Gas:RequestInitRecommend(fd, sessionId, context)
+function Gac2Gas:RequestAuth(fd, args)
 
-	local firstName = context
+	-- PrintTable(args)
+
+	local userId = 0
+	if requestInfo and args.userId and args.userId ~= 0 then
+		userId = args.userId
+	else
+		localId = localId + 1
+		userId = localId
+	end
+
+	print("request auth, userId is", userId)
+
+	local authInfo = {
+		userId		= userId,
+		initTime 	= os.time(),
+		token 		= "8e32af9d03",
+	}
+	SendRpc(fd, "RequestAuthDone", authInfo)	
+end
+
+function Gac2Gas:RequestInitRecommend(fd, context)
+
+	local firstName = context.input
 	local result = {
 		{-360,0,firstName.."锄"},
 		{-180,0,firstName.."禾"},
@@ -46,7 +73,7 @@ function Gac2Gas:RequestInitRecommend(fd, sessionId, context)
 		{360,0,firstName.."午"},
 	}
 
-	SendRpc(fd, sessionId, "SyncRecommendName", result)
+	SendRpc(fd, "SyncRecommendName", result)
 end
 
 local function Dispatch(fd, str)
@@ -63,15 +90,17 @@ local function Dispatch(fd, str)
 		return
 	end
 
-	local sessionId = rpcInfo.sessionId
-	if not sessionId then
-		localId = localId + 1
-		sessionId = localId
+	core.log("rpc come in, cmd:", cmd)
+
+	local requestArgs = json.decode(rpcInfo.context)
+	if not requestArgs then
+		core.log("rpc come in, invalid context, cmd:", cmd)
+		return
 	end
 
-	core.log("rpc come in, cmd:", cmd, ", sessionId:", sessionId)
+	rpcHandler(Gac2Gas, fd, requestArgs)
 
-	rpcHandler(Gac2Gas, fd, sessionId, rpcInfo.context)
+	core.log("handle rpc sucessfully. cmd:", cmd)
 	return true
 end
 
