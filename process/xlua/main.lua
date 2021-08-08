@@ -65,6 +65,10 @@ end
 function Gac2Gas:RequestInitRecommend(fd, context)
 
 	local firstName = context.input
+	if #firstName <= 0 then
+		firstName = "赵"
+	end
+
 	local result = {
 		{-360,0,firstName.."锄"},
 		{-180,0,firstName.."禾"},
