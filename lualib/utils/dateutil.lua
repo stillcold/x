@@ -57,6 +57,9 @@ function DateUtil:YangLi2NongLiDate(st)
 	nIsEnd = 0;
 	m = 0;
 	while nIsEnd ~= 1 do
+		if not wNongliData[m+1] then
+			return {year = wCurYear, month = wCurMonth, day = wCurDay}, "算不出来"
+		end
 		if wNongliData[m+1] < 4095 then
 			k = 11;
 		else

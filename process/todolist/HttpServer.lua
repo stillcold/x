@@ -77,7 +77,7 @@ if not isCacheHit then
 		print(k, jsonTbl.date)
 		local year, month, day = string.match(jsonTbl.date or "", "(%d+)[^%d]+(%d+)[^%d]+(%d+)")
 		local isYangLi = jsonTbl.isYangLi
-		year 	= tonumber(year)
+		year 	= tonumber(today.year)
 		month 	= tonumber(month)
 		day 	= tonumber(day)
 		
@@ -89,7 +89,7 @@ if not isCacheHit then
 			local birthDayYangLiDate = dateUtil:NongLi2ThisYearYangLi(birthdayDate)
 			PrintTable(birthDayYangLiDate)
 			local todayNongLiDate = dateUtil:YangLi2NongLiDate({year = today.year, month = today.month, day = today.day})
-			if dateUtil:IsBirthdayDateNear(nowTime, birthdayDate, true, dayRange) then
+			if dateUtil:IsBirthdayDateNear(nowTime, birthDayYangLiDate, true, dayRange) then
 				local text = v.Name
 				local nongliText = "(农历 "..birthdayDate.year.."-"..birthdayDate.month.."-"..birthdayDate.day..")"
 				birthdayTxt = birthdayTxt..birthDayYangLiDate.month.."月"..birthDayYangLiDate.day.."日"..nongliText.."是<em>"..text.."</em>的生日"..[[<br>]]
@@ -455,7 +455,7 @@ dispatch["/delete"] = function(fd, request, body)
 
 			result = result..[[<a href = "advance?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">advance</a>&nbsp;&nbsp;]]
 			result = result..[[<a href = "postpone?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">postpone</a>&nbsp;&nbsp;]]
-			result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&saveDel=]]..saveDel..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">]]..delbuttonText..[[</a>&nbsp;&nbsp;]]..textOfContent..[[<br>]]
+			result = result..[[<a href = "delete?sign=antihack&todoType=]]..content..[[&id=]]..v.Id..[[&remindTime=]]..v.RemindTime..[[&text=]]..text..[[">]]..delbuttonText..[[</a>&nbsp;&nbsp;]]..textOfContent..[[<br>]]
 		end
 	end
 	
