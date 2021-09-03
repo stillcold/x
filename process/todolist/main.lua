@@ -16,6 +16,7 @@ core.start(function()
 	
 	require "HttpServer"
 
+	require "Gac2Gas"
 end)
 
 
