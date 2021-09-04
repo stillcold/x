@@ -1,60 +1,108 @@
 local core = require "sys.core"
-local msg = require "saux.msg"
-local rpc = require "saux.rpc"
-local np = require "sys.netpacket"
+local mysql = require "sys.db.mysql"
+local json = require "sys.json"
+local gateway = require "saux.gac2gasgatewayproxy"
+local pb = require "pb"
+local protoc = require "protoc"
 local socket = require "sys.socket"
-
+local db = require "DbMgr"
+local dateUtil = require "utils/dateutil"
 require "utils.tableutils"
 
-local listen = socket.listen
-local readline = socket.readline
-local read = socket.read
-local readall = socket.readall
-local write = socket.write
+--[[ 
+protoc:load ([==[
+	message rpc {
+		optional string cmd			= 1;
+		optional string sign		= 2;
+		optional int64 sessionId	= 3;
+    	optional string context     = 4;
+    }
+]==])
+--]]
 
-local function ReadRpc(fd, handler)
+local function SendRpc(fd, cmd, context)
 
-	-- 一旦这个循环被打破,后面的数据就不会被消耗掉
-	while true do
-
-		local head_data = socket.read(fd, 4)
-		if not head_data then return end
-
-		local pcall = core.pcall
-		local dataLen = string.unpack("<I4", head_data)
-
-		local ok, err
-
-		if dataLen <= 0 then
-			ok, err = pcall(handler, fd, "")
-		else
-			local str = socket.read(fd, dataLen)
-			ok, err = pcall(handler, fd, str)
-		end
-
-		if not ok then
-			core.close(fd)
-			return
-		else
-			-- core.close(fd)
-		end
+	if not context then
+		core.log("no content to send")
+		return
 	end
-	
+
+	if type(context) ~= "table" then
+		core.log("invalid context type")
+		return
+	end
+
+	sign = tostring(os.time())
+
+	local data = {
+		cmd 		= cmd,
+		sign 		= sign,
+		context 	= json.encode(context),-- 这里只是为了快速开发直接用了json,其实可以考虑protobuffer.
+	}
+
+	local bytes = assert(pb.encode("rpc", data))
+	print("Send rpc, data len", #bytes)
+	socket.write(fd, string.pack("<I4", #bytes)..bytes)
 end
 
-function SocketAgent(fd, handler)
-	ReadRpc(fd, handler)
-end
-
-local server = {
-	listen = function (port, handler)
-		local h = function(fd)
-			SocketAgent(fd, handler)
+local gas2gac_mt = {
+	__index = function(table, key)
+		local doSend = function(table, fd, context)
+			print("send rpc ", key, table)
+			SendRpc(fd, key, context)
 		end
-		listen(port, h)
-	end,
+		return doSend
+	end
 }
 
-return server
+local gac2gas
+local gas2gac
 
+local fd2sessionId = {}
+local localId = 0
+
+local function Dispatch(fd, str)
+
+	local rpcInfo = pb.decode("rpc",str)
+	if not rpcInfo then 
+		core.log("decode rpc failed")
+		return
+	end
+	local cmd = rpcInfo.cmd
+	local rpcHandler = gac2gas[cmd]
+	if not rpcHandler then
+		core.log("rpc handler not found")
+		return
+	end
+
+	core.log("rpc come in, cmd:", cmd)
+
+	local requestArgs = json.decode(rpcInfo.context)
+	if not requestArgs then
+		core.log("rpc come in, invalid context, cmd:", cmd)
+		return
+	end
+
+	rpcHandler(gac2gas, fd, requestArgs)
+
+	core.log("handle rpc sucessfully. cmd:", cmd)
+	return true
+end
+
+local tbl = {}
+
+function tbl:startService(Gac2Gas, Gas2Gac, protocal)
+	protoc:load(protocal)
+
+	gac2gas = Gac2Gas
+	gas2gac = Gas2Gac
+	
+	setmetatable(Gas2Gac, gas2gac_mt)
+	
+	local addr = core.envget("port")
+	core.log("gac2gas service start at:", addr)
+	gateway.listen(addr, Dispatch)
+end
+
+return tbl
 

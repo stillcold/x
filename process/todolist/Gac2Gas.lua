@@ -1,65 +1,76 @@
+local db = require "DbMgr"
+local dateUtil = require "utils/dateutil"
 local core = require "sys.core"
-local mysql = require "sys.db.mysql"
 local json = require "sys.json"
-local gateway = require "saux.gateway"
-local pb = require "pb"
-local protoc = require "protoc"
-local socket = require "sys.socket"
 
-protoc:load ([==[
-	message rpc {
-		optional string cmd			= 1;
-		optional string sign		= 2;
-		optional int64 sessionId	= 3;
-    	optional string context     = 4;
-    }
-]==])
+function Gac2Gas:RequestGetRecentTask(fd, args)
 
-local fd2sessionId = {}
-local Gac2Gas = {}
-local Gas2Gac = {}
-local localId = 0
+	print("handle rpc...")
+	
+	local rangeBegin = args.rangeBegin
+	local rangeEnd = args.rangeEnd
 
-local function SendRpc(fd, cmd, context)
+	local todo = {}
+	local birthday = {}
 
-	if not context then return end
-	if type(context) ~= "table" then
-		core.log("invalid context type")
-		return
+	local queryResult = db:GetRecordByRemindTimeRange(rangeBegin, rangeEnd)
+
+	local today = os.date("*t", nowTime)
+
+	for k,v in pairs (queryResult or {}) do
+		local jsonStr   = v.AllProps
+		local jsonTbl   = json.decode(jsonStr)
+		local text      = jsonTbl.content
+		local pin       = jsonTbl.pin
+		local remindTime = v.RemindTime
+		local t = os.date("*t", remindTime)
+		local dateForCompare = os.time({year = t.year, month = t.month, day = t.day, hour = 0, min = 0, sec = 0})
+		table.insert(todo, {content = text, pin = pin, date = dateForCompare})
 	end
 
-	sign = tostring(os.time())
+	core.log("handle todo done, prepare to handle birthday...")
+
+	queryResult = db:GetAllBirthdayRecord(rangeBegin, rangeEnd)
+
+	for k,v in pairs (queryResult or {}) do
+		core.log("one birthday record", v.Name)
+		local jsonStr = v.AllProps
+		local jsonTbl = json.decode(jsonStr)
+		core.log(v.Name, jsonTbl.date)
+		local year, month, day = string.match(jsonTbl.date or "", "(%d+)[^%d]+(%d+)[^%d]+(%d+)")
+		local isYangLi = jsonTbl.isYangLi
+		year    = tonumber(today.year)
+		month   = tonumber(month)
+		day     = tonumber(day)
+		local birthdayDate = {year = year, month = month, day = day}
+		local birthDayYangLiDate
+
+		if isYangLi == false or isYangLi == "false" then
+			birthDayYangLiDate = dateUtil:NongLi2ThisYearYangLi(birthdayDate)
+		else
+			birthDayYangLiDate = birthdayDate
+		end
+		birthDayYangLiDate.hour = 0
+		birthDayYangLiDate.min = 0
+		birthDayYangLiDate.sec = 0
+
+		-- PrintTable(birthDayYangLiDate)
+		local date = os.time(birthDayYangLiDate)
+
+		table.insert(birthday, {name = v.Name, date = date})
+	end
+
+	core.log("all data selected from db done...")
 
 	local data = {
-		cmd 		= cmd,
-		sign 		= sign,
-		context 	= json.encode(context),-- 这里只是为了快速开发直接用了json,其实可以考虑protobuffer.
+		todo = todo,
+		birthday = birthday,
 	}
 
-	local bytes = assert(pb.encode("rpc", data))
-	socket.write(fd, string.pack("<I4", #bytes)..bytes)
-end
+	core.log("ready to send rpc")
 
-function Gac2Gas:RequestAuth(fd, args)
-
-	-- PrintTable(args)
-
-	local userId = 0
-	if requestInfo and args.userId and args.userId ~= 0 then
-		userId = args.userId
-	else
-		localId = localId + 1
-		userId = localId
-	end
-
-	print("request auth, userId is", userId)
-
-	local authInfo = {
-		userId		= userId,
-		initTime 	= os.time(),
-		token 		= "8e32af9d03",
-	}
-	SendRpc(fd, "RequestAuthDone", authInfo)	
+	-- SendRpc(fd, "ReplyRecentTask", data)	
+	Gas2Gac:ReplyRecentTask(fd, data)
 end
 
 function Gac2Gas:RequestInitRecommend(fd, context)
@@ -79,41 +90,4 @@ function Gac2Gas:RequestInitRecommend(fd, context)
 
 	SendRpc(fd, "SyncRecommendName", result)
 end
-
-local function Dispatch(fd, str)
-
-	local rpcInfo = pb.decode("rpc",str)
-	if not rpcInfo then 
-		core.log("decode rpc failed")
-		return
-	end
-	local cmd = rpcInfo.cmd
-	local rpcHandler = Gac2Gas[cmd]
-	if not rpcHandler then
-		core.log("rpc handler not found")
-		return
-	end
-
-	core.log("rpc come in, cmd:", cmd)
-
-	local requestArgs = json.decode(rpcInfo.context)
-	if not requestArgs then
-		core.log("rpc come in, invalid context, cmd:", cmd)
-		return
-	end
-
-	rpcHandler(Gac2Gas, fd, requestArgs)
-
-	core.log("handle rpc sucessfully. cmd:", cmd)
-	return true
-end
-	
-local function run()
-
-	local addr = core.envget("port")
-	core.log("gac2gas service start at:", addr)
-	gateway.listen(addr, Dispatch)
-end
-
-run()
 
