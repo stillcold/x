@@ -34,6 +34,7 @@ local function ReadRpc(fd, handler)
 
 		if not ok then
 			core.close(fd)
+			core.log("error in rpc excute", err)
 			return
 		else
 			-- core.close(fd)
