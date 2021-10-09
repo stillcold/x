@@ -5,6 +5,7 @@ local core = require "sys.core"
 local DbMgr = {}
 
 DbMgr.db = nil
+local lastVisitTime
 
 function DbMgr:SelectTable()
 	local db = mysql.create {
@@ -19,12 +20,15 @@ function DbMgr:SelectTable()
 	status, res = db:query("use todo;")
 	print("use todo;", status)
 	self.db = db
+
+	lastVisitTime = os.time()
+
 	return db
 end
 
 function DbMgr:InsertRecord(Id, RemindTime, AllProps, Name, FartherId, ChildId, BeginTime, EndTime)
 
-	if not DbMgr.db or DbMgr.db.state ~= 1 then
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
@@ -49,11 +53,11 @@ end
 
 function DbMgr:GetRecordByRemindTimeRange(LowTime, HighTime)
 
-	if not DbMgr.db or DbMgr.db.state ~= 1 then
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
-	local statement = string.format ("select * from todo where RemindTime > %.0f and RemindTime < %0.f order by RemindTime asc",LowTime, HighTime)
+	local statement = string.format ("select * from todo where RemindTime > %.0f and RemindTime < %0.f order by Finished, RemindTime asc",LowTime, HighTime)
 
 	print(statement)
 	local status,res = self.db:query(statement)
@@ -62,9 +66,39 @@ function DbMgr:GetRecordByRemindTimeRange(LowTime, HighTime)
 	return res
 end
 
+function DbMgr:MarkRecordFinishedStaus(id, finished)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	-- id = string.sub(id, 1, 10)
+
+	print(id)
+
+	if not id then return end
+
+	local fixedFinished = 0
+	if finished and finished ~= 0 then
+		fixedFinished = 1
+	end
+
+	local statement = string.format ("update todo set finished = %s where id = %s", fixedFinished, id)
+
+	print(statement)
+	local status,res = self.db:query(statement)
+	print(status, res)
+
+	for k,v in pairs(res) do
+		print(k,v)
+	end
+	
+	return res
+end
+
 function DbMgr:DeleteRecordById(id)
 
-	if not DbMgr.db or DbMgr.db.state ~= 1 then
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
@@ -89,7 +123,7 @@ end
 
 function DbMgr:PostponeRecordById(id, remindTime)
 
-	if not DbMgr.db or DbMgr.db.state ~= 1 then
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
@@ -114,7 +148,7 @@ end
 
 function DbMgr:AdvanceRecordById(id, remindTime)
 
-	if not DbMgr.db or DbMgr.db.state ~= 1 then
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
@@ -138,7 +172,8 @@ function DbMgr:AdvanceRecordById(id, remindTime)
 end
 
 function DbMgr:InsertBirthdayRecord(Name, AllProps)
-	if not DbMgr.db or DbMgr.db.state ~= 1 then
+	
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
@@ -158,7 +193,8 @@ end
 
 
 function DbMgr:DeleteAllBirthdayRecord()
-	if not DbMgr.db or DbMgr.db.state ~= 1 then
+	
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
@@ -174,7 +210,8 @@ function DbMgr:DeleteAllBirthdayRecord()
 end
 
 function DbMgr:GetAllBirthdayRecord()
-	if not DbMgr.db or DbMgr.db.state ~= 1 then
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
@@ -184,6 +221,77 @@ function DbMgr:GetAllBirthdayRecord()
 	local status,res = self.db:query(statement)
 	print(status, res)
 	
+	return res
+end
+
+function DbMgr:AddNewMindmap(Id, Name, Discription, Children, ExtendProps)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	Name = Name or "name"
+	AllProps = AllProps or "{}"
+
+	local statement = string.format ("insert into mindmap (Id, Name, Discription, Children, ExtendProps) values ('%s', '%s', '%s', '%s', '%s')",Id, Name, Discription, Children, ExtendProps)
+
+	print(statement)
+	local status,res = self.db:query(statement)
+	print(status, res)
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+
+end
+
+function DbMgr:GetAllMindmap()
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	local statement = string.format ("select * from mindmap")
+
+	print(statement)
+	local status,res = self.db:query(statement)
+
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+	return res
+end
+
+function DbMgr:GetMindmapById(id)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	local statement = string.format ("select * from mindmap where id = '%s'", id)
+
+	print(statement)
+	local status,res = self.db:query(statement)
+
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+	return res
+end
+
+function DbMgr:MindmapAddChildById(id, children)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	local statement = string.format ("update mindmap set Children ='%s'where id = '%s'", children, id)
+
+	print(statement)
+	local status,res = self.db:query(statement)
+
+	for k,v in pairs (res) do
+		print(k,v)
+	end
 	return res
 end
 
