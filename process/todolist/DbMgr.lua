@@ -224,6 +224,45 @@ function DbMgr:GetAllBirthdayRecord()
 	return res
 end
 
+function DbMgr:AddNewDiary(tag, content, addTime)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	addTime = addTime or os.time()
+	local statement = string.format ("insert into diary (Tag, Content, timeflag) values ('%s', '%s', %s)", tag, content, addTime)
+
+	print(statement)
+	local status,res = self.db:query(statement)
+	print(status, res)
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+
+end
+
+function DbMgr:QueryWeeklyReport(tag, endTime, beginTime)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+	
+	endTime = endTime or os.time()
+	beginTime = beginTime or (endTime - 14*24*3600)
+	
+	local statement = string.format ("select * from diary where tag = '%s' and timeflag between %s and %s order by timeflag desc", tag, beginTime, endTime)
+
+	print(statement)
+	local status,res = self.db:query(statement)
+	print(status, res)
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+	
+	return res
+end
+
 function DbMgr:AddNewMindmap(Id, Name, Discription, Children, ExtendProps)
 
 	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
@@ -278,14 +317,82 @@ function DbMgr:GetMindmapById(id)
 	return res
 end
 
-function DbMgr:MindmapAddChildById(id, children)
+function DbMgr:MindmapAddChildById(id, name, children, discription, props)
 
 	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
 		self:SelectTable()
 	end
 
-	local statement = string.format ("update mindmap set Children ='%s'where id = '%s'", children, id)
+	local statement = string.format ("update mindmap set Name = '%s', Children ='%s', Discription ='%s', ExtendProps = '%s' where id = '%s'", name, children, discription, props, id)
 
+	print(statement)
+	local status,res = self.db:query(statement)
+
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+	return res
+end
+
+function DbMgr:MindmapUpdateChildById(id, children)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	local statement = string.format ("update mindmap set Children ='%s' where id = '%s'", children, id)
+
+	print(statement)
+	local status,res = self.db:query(statement)
+
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+	return res
+end
+
+function DbMgr:MindmapDelById(id)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	local statement = string.format ("delete from mindmap where id = '%s'", id)
+
+	print(statement)
+	local status,res = self.db:query(statement)
+
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+	return res
+end
+
+function DbMgr:LoadAllHealthRecord()
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	local statement = string.format ("select * from healthrecord")
+	
+	print(statement)
+	local status,res = self.db:query(statement)
+
+	for k,v in pairs (res) do
+		print(k,v)
+	end
+	return res
+end
+
+function DbMgr:SetHealthRecord(id, props)
+
+	if not DbMgr.db or DbMgr.db.state ~= 1 or (lastVisitTime - os.time()) > 3600  then
+		self:SelectTable()
+	end
+
+	local statement = string.format ("update healthrecord set Props = '%s' where id = %s", props, id)
+	
 	print(statement)
 	local status,res = self.db:query(statement)
 
